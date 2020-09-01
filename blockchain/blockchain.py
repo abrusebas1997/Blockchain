@@ -2,16 +2,9 @@ import hashlib
 import json
 from time import time
 
-# Creating the app node
-
 app = Flask(__name__)
-node_identifier = str(uuid4()).replace(‘-‘,”)
 
-# Initializing blockchain
-
-blockchain = Blockchain()
-
-@app.route(‘/mine’, methods=[‘GET’])
+@app.route('/mine', methods=['GET'])
 def mine():
     last_block = blockchain.last_block
     last_proof = last_block[‘proof’]
@@ -25,6 +18,7 @@ def mine():
 
     previous_hash = blockchain.hash(last_block)
     block = blockchain.new_block(proof, previous_hash)
+
     response = {
         'message':'The new block has been forged',
         'index': block['index'],
@@ -34,6 +28,8 @@ def mine():
     }
 
     return jsonify(response), 200
+
+@app.route('/transactions/new', methods=['POST'])
 
 
 class Blockchain(object):
@@ -50,12 +46,13 @@ class Blockchain(object):
 
     @staticmethod
     def valid_proof(last_proof, proof):
-        guess = f’{last_proof}{proof}‘.encode()
+        guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexigest()
-        return guess_hash[:4] == “0000”
+        return guess_hash[:4] == "0000"
 
     def new_block(self, proof, previous_hash=None):
         #This function creates new blocks and then adds to the existing chain
+
         block = {
            'index': len(self.chain) + 1,
            'timestamp' : time(),
@@ -65,12 +62,10 @@ class Blockchain(object):
 
    # Set the current transaction list to empty.
 
-    self.current_transactions=[]
-    self.chain.append(block)
-    return block
+        self.current_transactions=[]
+        self.chain.append(block)
+        return block
 
-
-    @app.route(‘/transactions/new’, methods=[‘POST’])
     def new_transaction(self):
         #This function adds a new transaction to already existing transactions
         self.current_transactions.append(
@@ -91,9 +86,6 @@ class Blockchain(object):
 
         return jsonify(response), 200
 
-    if __name__ == ‘__main__’:
-        app.run(host=“0.0.0.0”, port=5000)
-
     @staticmethod
     def hash(block):
         #Used for hashing a block
@@ -104,3 +96,13 @@ class Blockchain(object):
     def last_block(self):
         # Calls and returns the last block of the chain
         return self.chain[-1]
+
+
+node_identifier = str(uuid4()).replace('-',"")
+
+# initialize blockchain
+
+blockchain = Blockchain()
+
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=5000)
