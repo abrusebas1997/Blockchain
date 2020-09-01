@@ -1,13 +1,15 @@
 import hashlib
 import json
+from uuid import uuid4
 from time import time
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 
 @app.route('/mine', methods=['GET'])
 def mine():
     last_block = blockchain.last_block
-    last_proof = last_block[‘proof’]
+    last_proof = last_block['proof']
     proof = blockchain.proof_of_work(last_proof)
 
     blockchain.new_transaction(
@@ -30,7 +32,24 @@ def mine():
     return jsonify(response), 200
 
 @app.route('/transactions/new', methods=['POST'])
+def new_transaction():
+    values = request.get_json()
+    required = ['sender', 'recipient', 'amount']
+    if not all(k in values for k in required):
+        return 'Missing values', 400
 
+    index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
+    response = {'message': f'Transaction is scheduled to be added to Block No. {index}'}
+    return jsonify(response), 201
+
+@app.route('/chain', methods=['GET'])
+def full_chain():
+    response = {
+        'chain': blockchain.chain,
+        'length': len(blockchain.chain)
+    }
+
+    return jsonify(response), 200
 
 class Blockchain(object):
     def __init__(self):
@@ -52,7 +71,6 @@ class Blockchain(object):
 
     def new_block(self, proof, previous_hash=None):
         #This function creates new blocks and then adds to the existing chain
-
         block = {
            'index': len(self.chain) + 1,
            'timestamp' : time(),
@@ -61,7 +79,6 @@ class Blockchain(object):
        }
 
    # Set the current transaction list to empty.
-
         self.current_transactions=[]
         self.chain.append(block)
         return block
@@ -77,14 +94,6 @@ class Blockchain(object):
         )
         return self.last_block['index'] + 1
 
-    @app.router(‘/chain’, methods=[‘GET’])
-    def full_chain():
-        response = {
-            'chain':blockchain.chain,
-            'length':len(blockchain.chain)
-        }
-
-        return jsonify(response), 200
 
     @staticmethod
     def hash(block):
