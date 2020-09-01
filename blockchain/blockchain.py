@@ -2,6 +2,40 @@ import hashlib
 import json
 from time import time
 
+# Creating the app node
+
+app = Flask(__name__)
+node_identifier = str(uuid4()).replace(‘-‘,”)
+
+# Initializing blockchain
+
+blockchain = Blockchain()
+
+@app.route(‘/mine’, methods=[‘GET’])
+def mine():
+    last_block = blockchain.last_block
+    last_proof = last_block[‘proof’]
+    proof = blockchain.proof_of_work(last_proof)
+
+    blockchain.new_transaction(
+        sender = '0',
+        recipient = node_identifier,
+        amount = 1,
+    )
+
+    previous_hash = blockchain.hash(last_block)
+    block = blockchain.new_block(proof, previous_hash)
+    response = {
+        'message':'The new block has been forged',
+        'index': block['index'],
+        'transactions': block['transactions'],
+        'proof': block['proof'],
+        'previous_hash' : block['previous_hash']
+    }
+
+    return jsonify(response), 200
+
+
 class Blockchain(object):
     def __init__(self):
         self.chain = []
@@ -31,10 +65,12 @@ class Blockchain(object):
 
    # Set the current transaction list to empty.
 
-   self.current_transactions=[]
-   self.chain.append(block)
-   return block
+    self.current_transactions=[]
+    self.chain.append(block)
+    return block
 
+
+    @app.route(‘/transactions/new’, methods=[‘POST’])
     def new_transaction(self):
         #This function adds a new transaction to already existing transactions
         self.current_transactions.append(
@@ -45,6 +81,18 @@ class Blockchain(object):
             }
         )
         return self.last_block['index'] + 1
+
+    @app.router(‘/chain’, methods=[‘GET’])
+    def full_chain():
+        response = {
+            'chain':blockchain.chain,
+            'length':len(blockchain.chain)
+        }
+
+        return jsonify(response), 200
+
+    if __name__ == ‘__main__’:
+        app.run(host=“0.0.0.0”, port=5000)
 
     @staticmethod
     def hash(block):
